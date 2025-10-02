@@ -6,14 +6,24 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.Optional;
+
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.FollowPathCommand;
+import com.pathplanner.lib.commands.PathfindingCommand;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.pathfinding.Pathfinding;
 
 import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -40,7 +50,7 @@ import frc.robot.Constants.LiftConstants;
 public class RobotContainer {
     private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
-
+    private Optional<Alliance> ally = DriverStation.getAlliance();
     /* Setting up bindings for necessary control of the swerve drive platform */
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
@@ -71,9 +81,11 @@ public class RobotContainer {
         NamedCommands.registerCommand("L4_LiftPos", new PID_SetLiftPosition(m_lift, LiftConstants.kLiftSetpoint4+2,true));
         NamedCommands.registerCommand("CoralShoot", new CoralShoot(m_claw));
         NamedCommands.registerCommand("L1_LiftPos", new PID_SetLiftPosition(m_lift, LiftConstants.kLiftSetpoint1, true));
+        
+
         configureBindings();
 
-        autoChooser = AutoBuilder.buildAutoChooser("Tests");
+        autoChooser = AutoBuilder.buildAutoChooser("Auto Paths");
         SmartDashboard.putData("Auto Mode", autoChooser);
 
         configureBindings();
@@ -100,7 +112,7 @@ public class RobotContainer {
         RobotModeTriggers.disabled().whileTrue(
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
-
+        
         driverXbox.a().whileTrue(drivetrain.applyRequest(() -> brake));
         driverXbox.b().whileTrue(drivetrain.applyRequest(() ->
             point.withModuleDirection(new Rotation2d(-driverXbox.getLeftY(), -driverXbox.getLeftX()))
@@ -117,6 +129,22 @@ public class RobotContainer {
         driverXbox.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
         drivetrain.registerTelemetry(logger::telemeterize);
+
+        Pose2d closeLeft;
+        //blue alliance targets
+        if (ally.get() == Alliance.Blue)
+        {
+            closeLeft = new Pose2d(3.9, 5.4, Rotation2d.fromDegrees(-88.9));
+        }
+        else 
+        {
+            closeLeft = new Pose2d(10, 5, Rotation2d.fromDegrees(180));
+        }
+
+        // Create the constraints to use while pathfinding
+        PathConstraints constraints = new PathConstraints(
+                3.0, 4.0,
+                Units.degreesToRadians(540), Units.degreesToRadians(720));
 
 
         //REEFSCAPE SPECIFIC BINDINGS
@@ -151,7 +179,14 @@ public class RobotContainer {
 
         mechXbox.leftStick().whileTrue(new AlgaeShoot(m_claw, m_clawWheel, ClawConstants.kClawSetpoint2, m_lift));
 
-        driverXbox.y().whileTrue(new Hang(m_hang));
+        driverXbox.a().whileTrue(AutoBuilder.pathfindToPose(
+            closeLeft,
+            constraints,
+            0.0 // Goal end velocity in meters/sec
+        ));
+
+        //driverXbox.y().whileTrue(new Hang(m_hang));
+
 
         //driverXbox.a().whileTrue(CommandSwerveDrivetrain.driveToPose(new Pose2d(new Translation2d(2, 2), Rotation2d.fromDegrees(0))) );
         //driverXbox.b().onTrue(CommandSwerveDrivetrain.driveToPose(new Pose2d(new Translation2d(2, 2), Rotation2d.fromDegrees(0))) );

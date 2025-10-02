@@ -1,0 +1,49 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "CentertoReef"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "N_ClawPos"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "L4_LiftPos"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "CoralShoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "L1_LiftPos"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Center_reefToStation"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
